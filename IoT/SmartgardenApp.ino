@@ -65,21 +65,135 @@ void setup() {
 
   // Handle web server routes
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = "<!DOCTYPE html><html><head><title>Smart Farm</title>";
-    html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
-    html += "<style>body {font-family: Arial; text-align: center;}";
-    html += ".btn {padding: 10px 20px; font-size: 18px; margin: 10px; border: none; cursor: pointer;}";
-    html += ".on {background-color: green; color: white;}";
-    html += ".off {background-color: red; color: white;}</style></head>";
-    html += "<body><h1>Smart Farm Control</h1>";
-    html += "<p>Current Time: " + getCurrentTime() + "</p>";
-    html += "<p>Valve Status: " + String(isValveOpen ? "Open" : "Closed") + "</p>";
-    html += "<button class='btn " + String(isValveOpen ? "off" : "on") + 
-            "' onclick='toggleValve()'>" + String(isValveOpen ? "Close Valve" : "Open Valve") + "</button>";
-    html += "<script>function toggleValve() {fetch('/toggle');location.reload();}</script>";
-    html += "</body></html>";
+    String html = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Farm Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 24px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-on {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-off {
+      background-color: #f44336;
+      color: white;
+    }
+    input[type="time"], input[type="number"] {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 100%;
+    }
+    input[type="submit"] {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    footer {
+      text-align: center;
+      padding: 10px;
+      background-color: #333;
+      color: white;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Smart Farm Control
+  </header>
+  <div class="container">
+    <div class="card">
+      <h2>Current Status</h2>
+      <p><strong>Current Time:</strong> %TIME%</p>
+      <p><strong>Valve Status:</strong> <span>%VALVE_STATUS%</span></p>
+      <button class="btn %VALVE_BUTTON_CLASS%" onclick="toggleValve()">
+        %VALVE_BUTTON_TEXT%
+      </button>
+    </div>
+    <div class="card">
+      <h2>Set Watering Schedule</h2>
+      <form method="GET" action="/set">
+        <label for="morning">Morning Time:</label>
+        <input type="time" id="morning" name="morning" value="%MORNING_TIME%">
+        <label for="evening">Evening Time:</label>
+        <input type="time" id="evening" name="evening" value="%EVENING_TIME%">
+        <label for="duration">Watering Duration (minutes):</label>
+        <input type="number" id="duration" name="duration" value="%DURATION%">
+        <input type="submit" value="Save Settings">
+      </form>
+    </div>
+  </div>
+  <footer>
+    &copy; 2025 Smart Farm System
+  </footer>
+  <script>
+    function toggleValve() {
+      fetch('/toggle').then(() => location.reload());
+    }
+  </script>
+</body>
+</html>
+)rawliteral";
+
+    // Replace placeholders with dynamic values
+    html.replace("%TIME%", getCurrentTime());
+    html.replace("%VALVE_STATUS%", isValveOpen ? "Open" : "Closed");
+    html.replace("%VALVE_BUTTON_CLASS%", isValveOpen ? "btn-off" : "btn-on");
+    html.replace("%VALVE_BUTTON_TEXT%", isValveOpen ? "Close Valve" : "Open Valve");
+    html.replace("%MORNING_TIME%", morningTime);
+    html.replace("%EVENING_TIME%", eveningTime);
+    html.replace("%DURATION%", String(wateringDuration));
+    
     request->send(200, "text/html", html);
-  });
+});
 
   server.on("/toggle", HTTP_GET, [](AsyncWebServerRequest *request) {
     isScheduledWatering = false; // Disable scheduled watering if manually toggled
